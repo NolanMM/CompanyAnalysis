@@ -1,0 +1,9 @@
+numpy
+pandas
+fredapi
+notebook
+yfinance
+streamlit
+matplotlib
+scikit-learn
+snowflake-connector-python
