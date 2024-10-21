@@ -3,7 +3,8 @@ The project aims to build a comprehensive system for analyzing the financial hea
 
 ---
 
-## II. Tech Stack
+## II. Tech Stack 
+###### ( [Quick scroll to Set Up Environment](#v-set-up-project) )
 
 ##### 1. Data Collection & Preprocessing:
 - **Python Libraries**: pandas, numpy, requests, yfinance, fredapi
@@ -148,9 +149,7 @@ The project aims to build a comprehensive system for analyzing the financial hea
 
 </details>
 
-</br>
-
-##### 3. Retrieve The Necessary API Keys
+#### 3. Retrieve The Necessary API Keys
 
 - 3.1 Retrieve The FRED API Keys Instruction
   - [Retrieve The FRED API Keys Instruction](./Documents/Images/Retrieve_FRED_API_Key.md)
