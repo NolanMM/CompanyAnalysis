@@ -1,1 +1,6 @@
 /venv
+/myenv
+/notes.txt
+/Server/Services/Airflow_Snowflake_Pipeline/logs
+/Server/Services/Airflow_Snowflake_Pipeline/airflow.db
+/Server/Services/Airflow_Snowflake_Pipeline/airflow.cfg
