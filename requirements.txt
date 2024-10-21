@@ -1,6 +1,8 @@
 apache-airflow-providers-snowflake
 snowflake-connector-python
 apache-airflow
+WTForms==2.3.3
+python-dotenv
 scikit-learn
 matplotlib
 streamlit
