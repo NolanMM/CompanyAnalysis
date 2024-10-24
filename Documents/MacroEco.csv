@@ -1,0 +1,23 @@
+Metric,Formula
+Gross Domestic Product (GDP),GDP = Consumption + Investment + Government Spending + (Exports - Imports)
+Unemployment Rate,Unemployment Rate = (Unemployed Workers / Total Labor Force) * 100
+Interest Rates,Interest Rate = (Interest / Principal) * 100
+Inflation Rate (CPI/PPI),Inflation Rate = [(Price Level Year 2 - Price Level Year 1) / Price Level Year 1] * 100
+Consumer Confidence Index (CCI),CCI = [(Positive Consumer Responses - Negative Consumer Responses) / Total Responses] * 100
+Purchasing Managers’ Index (PMI),PMI = [(Number of Positive Indicators / Total Indicators) * 100]
+Earnings Per Share (EPS),EPS = (Net Income - Preferred Dividends) / Average Outstanding Shares
+Price-to-Earnings (P/E) Ratio,P/E Ratio = Stock Price / Earnings Per Share (EPS)
+Debt-to-Equity Ratio (D/E),D/E Ratio = Total Liabilities / Shareholders' Equity
+Return on Equity (ROE),ROE = Net Income / Shareholders' Equity
+Free Cash Flow (FCF),FCF = Operating Cash Flow - Capital Expenditures
+EBITDA,EBITDA = Net Income + Interest + Taxes + Depreciation + Amortization
+VIX (Volatility Index),VIX = Annualized Volatility of S&P 500 Options
+Investor Sentiment,Investor Sentiment = Sentiment Score (calculated using NLP from various sources)
+Lock-up Expiration,No specific formula (Track timing of lock-up expiration and monitor its impact)
+Insider Trading,No specific formula (Monitor insider buying and selling activity)
+Underpricing or Overpricing,Underpricing = (First-Day Closing Price - IPO Price) / IPO Price * 100
+First-Day Price Performance,First-Day Price Performance = (Closing Price - Opening Price) / Opening Price * 100
+Volume of Shares Traded,No specific formula (Track volume of shares traded post-IPO)
+IPO Market Conditions,"No specific formula (Evaluate general IPO market conditions, i.e., number of IPOs, average performance)"
+Sector Growth Rates,Sector Growth Rate = (Sector's Revenue Growth / Previous Revenue Period) * 100
+Competitive Analysis,Competitive Analysis = No specific formula (Compare company performance with competitors)
