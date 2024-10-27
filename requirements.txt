@@ -9,5 +9,6 @@ streamlit
 yfinance
 notebook
 fredapi
+plotly
 pandas
 numpy

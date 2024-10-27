@@ -204,12 +204,15 @@ class DataRetriever:
         df['GDP'] = df['Consumption'] + df['Investment'] + df['Government_Spending'] + (df['Exports'] - df['Imports'])
         df.ffill(inplace=True)
         # Calculate the GDP Growth Rate
-        df['GDP Growth Rate'] = df['GDP'].pct_change(fill_method=None) * 100
+        df['GDP_Growth_Rate'] = df['GDP'].pct_change(fill_method=None) * 100
         # Calculate Inflation Rate using the CPI
-        df['Inflation Rate'] = df['CPI'].pct_change(fill_method=None) * 100
+        df['Inflation_Rate'] = df['CPI'].pct_change(fill_method=None) * 100
         # Calculate Unemployment Rate
-        df['Unemployment Rate'] = (df['Unemployed'] / df['Labor_Force']) * 100
+        df['Unemployment_Rate'] = (df['Unemployed'] / df['Labor_Force']) * 100
         df['DateTime'] = df.index
+        df['Date'] = pd.to_datetime(df['DateTime']).dt.date
+        df = df.drop(columns=['DateTime'])
+        df = df.rename(columns={'Date': 'DateTime'})
         # Fill any missing values with forward fill
         df.ffill(inplace=True)
         df = df.map(lambda x: str(x) if isinstance(x, pd.Timestamp) else x)
