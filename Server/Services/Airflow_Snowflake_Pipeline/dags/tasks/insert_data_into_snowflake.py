@@ -36,16 +36,16 @@ def insert_snowflake_tables(**kwargs):
     df_dict = kwargs['ti'].xcom_pull(key='retrieved_data', task_ids='retrieve_data')
     df = pd.DataFrame(df_dict)
     df = df.map(lambda x: pd.to_datetime(x) if isinstance(x, str) and x.isdigit() == False else x)
+    gold_raw = df.copy()
+    # bronze_result = manager.load_bronze_data(df)
+    # if bronze_result != True:
+    #     return f"Error in Silver Table Processing: {bronze_result}"
     
-    bronze_result = manager.load_bronze_data(df)
-    if bronze_result != True:
-        return f"Error in Silver Table Processing: {bronze_result}"
-    
-    silver_result = manager.insert_or_update_silver(SILVER_TABLE_NAME, df)
-    if silver_result != True:
-        return f"Error in Silver Table Processing: {silver_result}"
+    # silver_result = manager.insert_or_update_silver(SILVER_TABLE_NAME, df)
+    # if silver_result != True:
+    #     return f"Error in Silver Table Processing: {silver_result}"
 
-    gold_result = manager.insert_or_update_gold(GOLD_TABLE_NAME, df)
+    gold_result = manager.insert_or_update_gold(GOLD_TABLE_NAME, gold_raw)
     if gold_result != True:
         return f"Error in Gold Table Processing: {gold_result}"
 
@@ -83,8 +83,8 @@ class SnowflakeDataManager:
             query = f"SHOW TABLES LIKE '{table_name}' IN SCHEMA {schema};"
             cursor = self.connection.cursor()
             cursor.execute(query)
-            result = cursor.fetchall()
-            return len(result) > 0
+            result = cursor.fetchone()
+            return result
         except Exception as e:
             print(f"Error checking table existence: {e}")
             return False
@@ -113,8 +113,6 @@ class SnowflakeDataManager:
 
             # Convert DataFrame to a list of tuples
             rows_to_insert = [tuple(x) for x in df.to_numpy()]
-
-            # Prepare SQL query for batch insert
             columns = ", ".join([f'"{col}"' for col in df.columns])
             placeholders = ", ".join(["%s"] * len(df.columns))
             insert_query = f'INSERT INTO "{schema}"."{table_name}" ({columns}) VALUES ({placeholders});'
@@ -127,7 +125,6 @@ class SnowflakeDataManager:
             print(f"Error inserting data: {e}")
     
     def load_bronze_data(self, df):
-        # Insert or update data into individual tables in the Bronze schema
         try:
             self.insert_or_update_bronze('Bronze_Consumption', df[['DateTime', 'Consumption']])
             self.insert_or_update_bronze('Bronze_Investment', df[['DateTime', 'Investment']])
@@ -170,79 +167,41 @@ class SnowflakeDataManager:
         #         """
         #         cursor.execute(update_query)
 
-        values = ', '.join(
-            [
-                f"('{row['DateTime']}', {', '.join([str(v) for v in row.values[1:]])})"
-                for index, row in data_df.iterrows()
-            ]
-        )
+        values = ', '.join([f"('{row['DateTime']}', {', '.join([str(v) for v in row.values[1:]])})" for index, row in data_df.iterrows()])
 
         # Construct the full INSERT INTO query without using quotes around column names
         insert_query = f"""
             INSERT INTO {self.database}.BRONZE.{table_name} (DateTime, {', '.join(data_df.columns[1:])})
             VALUES {values};
         """
-        # print(insert_query)
         cursor.execute(insert_query)
-        
         cursor.close()
         
-    def insert_or_update_silver(self, table_name, df):
+    def insert_or_update_silver(self, table_name:str, new_data: pd.DataFrame):
+        cursor = self.connection.cursor()
         if not self.check_table_exists("MACROECONOMIC.SILVER", table_name):
             print("Silver table does not exist.")
             return
-
-        last_datetime = self.get_last_datetime("MACROECONOMIC.SILVER", table_name)
-
-        if last_datetime is None:
-            new_data = df
-        else:
-            # Filter the DataFrame to get rows with DateTime greater than the last DateTime
-            new_data = df[df['DateTime'] > last_datetime]
         try:
+            new_data = new_data[['DateTime', 'Consumption', 'Investment', 'Government_Spending', 'Exports', 'Imports', 'Unemployed', 'Labor_Force', 'CPI', 'Current_Account_Balance', 'Public_Debt', 'Interest_Rate', 'FDI', 'Labor_Force_Participation', 'GDP', 'GDP_Growth_Rate', 'Inflation_Rate', 'Unemployment_Rate']]
+            new_data.bfill(inplace=True)
             cursor = self.connection.cursor()
-
-            # Convert DataFrame to list of tuples
-            rows_to_insert = [tuple(x) for x in new_data.to_numpy()]
-
-            # Prepare the insert query
-            insert_query = """
-            INSERT INTO Silver.Silver_MacroEconomic_Indicators (
-                DateTime, Consumption, Investment, Government_Spending, Exports, Imports,
-                Unemployed, Labor_Force, CPI, Current_Account_Balance, Public_Debt,
-                Interest_Rate, FDI, Labor_Force_Participation, GDP, GDP_Growth_Rate,
-                Inflation_Rate, Unemployment_Rate
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            values = ', '.join([f"('{row['DateTime']}', {', '.join([str(v) for v in row.values[1:]])})" for index, row in new_data.iterrows()])
+            insert_query = f"""
+                INSERT INTO {self.database}.SILVER.{table_name} (DateTime, {', '.join(new_data.columns[1:])})
+                VALUES {values};
             """
-
-            # Execute the batch insert
-            cursor.executemany(insert_query, rows_to_insert)
-            self.connection.commit()
-            print("Data inserted successfully into Silver.Silver_MacroEconomic_Indicators.")
-
+            cursor.execute(insert_query)          
+            cursor.close()
         except Exception as e:
             print(f"Error inserting data: {e}")
+            
 
-        finally:
-            cursor.close()
-
-    def insert_or_update_gold(self, gold_table_name, df):
+    def insert_or_update_gold(self, gold_table_name, new_data: pd.DataFrame):
+        cursor = self.connection.cursor()
         if not self.check_table_exists("MACROECONOMIC.GOLD", gold_table_name):
             print("Gold table does not exist.")
             return
-
-        last_datetime = self.get_last_datetime("MACROECONOMIC.GOLD", gold_table_name)
-
-        if last_datetime is None:
-            new_data = df
-        else:
-        # Filter the DataFrame to get rows with DateTime greater than the last DateTime
-            new_data = df[df['DateTime'] > last_datetime]
-        #new_data = df
-        if new_data.empty:
-            print("No new data to insert into the Gold table.")
-            return
-
         # Calculate additional columns for the Gold table
         new_data['GDP_Gold'] = new_data['GDP']
         new_data['GDP_Growth_Rate_Gold'] = new_data['GDP_Growth_Rate']
@@ -250,31 +209,26 @@ class SnowflakeDataManager:
         new_data['Unemployment_Rate_Gold'] = new_data['Unemployment_Rate']
 
         new_data['Previous_GDP'] = new_data['GDP_Gold'].shift(1)
-        new_data['Forecasted_GDP'] = new_data['GDP_Gold'] * (1 + new_data['GDP_Growth_Rate_Gold'].fillna(0))
-
         new_data['Previous_CPI'] = new_data['CPI'].shift(1)
-        new_data['Forecasted_Inflation'] = new_data['CPI'] * (1 + new_data['Inflation_Rate_Gold'].fillna(0))
 
+        # Forward fill missing values in the GDP_Growth_Rate_Gold and Inflation_Rate_Gold columns
+        new_data['GDP_Growth_Rate_Gold'] = new_data['GDP_Growth_Rate_Gold'].ffill()
+        new_data['Inflation_Rate_Gold'] = new_data['Inflation_Rate_Gold'].ffill()
+
+        # Calculate 'Forecasted_GDP' and 'Forecasted_Inflation'
+        new_data['Forecasted_GDP'] = new_data['GDP_Gold'] * (1 + new_data['GDP_Growth_Rate_Gold'])
+        new_data['Forecasted_Inflation'] = new_data['CPI'] * (1 + new_data['Inflation_Rate_Gold'])
+        new_data.bfill(inplace=True)
         gold_data = new_data[['DateTime', 'GDP_Gold', 'Forecasted_GDP', 'Forecasted_Inflation', 'Unemployment_Rate_Gold']]
-
         try:
             cursor = self.connection.cursor()
-
-            # Convert DataFrame to list of tuples
-            rows_to_insert = [tuple(x) for x in gold_data.to_numpy()]
-
-            # Prepare the insert query
-            insert_query = """
-            INSERT INTO Gold.Gold_MacroEconomic_Forecast (
-                DateTime, GDP_Gold, Forecasted_GDP, Forecasted_Inflation, Unemployment_Rate_Gold
-            ) VALUES (%s, %s, %s, %s, %s);
+            values = ', '.join([f"('{row['DateTime']}', {', '.join([str(v) for v in row.values[1:]])})" for index, row in gold_data.iterrows()])
+            insert_query = f"""
+                INSERT INTO {self.database}.GOLD.{gold_table_name} (DateTime, {', '.join(gold_data.columns[1:])})
+                VALUES {values};
             """
-
-            # Execute the batch insert
-            cursor.executemany(insert_query, rows_to_insert)
-            self.connection.commit()
-            print("Data inserted successfully into Gold.Gold_MacroEconomic_Forecast.")
-
+            cursor.execute(insert_query)          
+            cursor.close()
         except Exception as e:
             print(f"Error inserting data: {e}")
 

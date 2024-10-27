@@ -138,11 +138,13 @@ class AdminPage:
             # Check if AIRFLOW_HOME is set
             if sys.version_info >= (3, 10):
                 st.success("You're using Python 3.10 or newer.")
-                
+            else:
+                st.error("Please use Python 3.10 or newer.") 
             if os.getenv("AIRFLOW_HOME") is None:
                 st.error("Please set the AIRFLOW_HOME environment variable by the instruction below in terminal and retry.")
                 set_airflow_home_instructions()
-
+            else:
+                st.success("AIRFLOW_HOME is set.")
     def check_snowflake_configurations(self):
         st.subheader("I. Prerequisites", divider=True)
         st.markdown("""
@@ -184,7 +186,7 @@ class AdminPage:
     
     def render_project_introduction(self):
         read_me_path = os.getcwd()
-        read_me_path = read_me_path.replace("\\Server", "\\README.md")
+        read_me_path = os.path.join(read_me_path, "README.md")
         read_me_path = read_me_path.replace("\\", "/")
         with open(read_me_path, 'r') as f:
             readme_content = f.read()

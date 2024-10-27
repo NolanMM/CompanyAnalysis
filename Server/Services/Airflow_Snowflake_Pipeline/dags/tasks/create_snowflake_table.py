@@ -175,101 +175,41 @@ class SnowflakeTableManager:
         """Create Silver layer table if it doesn't exist."""
         if not self.check_table_exists('Silver', 'Silver_MacroEconomic_Indicators'):
             silver_query = """
-Create TABLE IF NOT EXISTS Silver.Silver_MacroEconomic_Indicators CLUSTER BY (DateTime) AS
-WITH Generated_Data AS (
-    SELECT 
-        DATEADD(DAY, SEQ4(), '2023-01-01') AS DateTime,
-        UNIFORM(500, 1000, RANDOM())::FLOAT AS Consumption,
-        UNIFORM(300, 800, RANDOM())::FLOAT AS Investment,
-        UNIFORM(200, 600, RANDOM())::FLOAT AS Government_Spending,
-        UNIFORM(400, 900, RANDOM())::FLOAT AS Exports,
-        UNIFORM(200, 700, RANDOM())::FLOAT AS Imports,
-        UNIFORM(50, 200, RANDOM())::NUMBER(38,0) AS Unemployed,
-        UNIFORM(200, 500, RANDOM())::NUMBER(38,0) AS Labor_Force,
-        UNIFORM(50, 150, RANDOM())::FLOAT AS CPI,
-        UNIFORM(-100, 100, RANDOM())::FLOAT AS Current_Account_Balance,
-        UNIFORM(500, 2000, RANDOM())::FLOAT AS Public_Debt,
-        UNIFORM(1, 10, RANDOM())::FLOAT AS Interest_Rate,
-        UNIFORM(50, 300, RANDOM())::FLOAT AS FDI,
-        UNIFORM(50, 100, RANDOM())::FLOAT AS Labor_Force_Participation
-    FROM 
-        TABLE(GENERATOR(ROWCOUNT => 365))
-)
-SELECT 
-    DateTime,
-    Consumption,
-    Investment,
-    Government_Spending,
-    Exports,
-    Imports,
-    Unemployed,
-    Labor_Force,
-    CPI,
-    Current_Account_Balance,
-    Public_Debt,
-    Interest_Rate,
-    FDI,
-    Labor_Force_Participation,
-    
-    (Consumption + Investment + Government_Spending + (Exports - Imports)) AS GDP,
-    (Consumption + Investment + Government_Spending + (Exports - Imports)) / 
-        LAG((Consumption + Investment + Government_Spending + (Exports - Imports)), 1) 
-        OVER (ORDER BY DateTime) - 1 AS GDP_Growth_Rate,
-    CPI / LAG(CPI, 1) OVER (ORDER BY DateTime) - 1 AS Inflation_Rate,
-    (Unemployed / Labor_Force) * 100 AS Unemployment_Rate
-FROM 
-    Generated_Data;
-            """
+CREATE TABLE IF NOT EXISTS Silver.Silver_MacroEconomic_Indicators (
+    DateTime DATE,
+    Consumption FLOAT,
+    Investment FLOAT,
+    Government_Spending FLOAT,
+    Exports FLOAT,
+    Imports FLOAT,
+    Unemployed FLOAT,
+    Labor_Force FLOAT,
+    CPI FLOAT,
+    Current_Account_Balance FLOAT,
+    Public_Debt FLOAT,
+    Interest_Rate FLOAT,
+    FDI FLOAT,
+    Labor_Force_Participation FLOAT,
+    GDP FLOAT,
+    GDP_Growth_Rate FLOAT,
+    Inflation_Rate FLOAT,
+    Unemployment_Rate FLOAT
+) CLUSTER BY (DateTime);
+"""
             self.execute_query(silver_query)
 
     def create_gold_table(self):
         """Create Gold layer table if it doesn't exist."""
         if not self.check_table_exists('Gold', 'Gold_MacroEconomic_Forecast'):
             gold_query = """
-CREATE TABLE IF NOT EXISTS Gold.Gold_MacroEconomic_Forecast 
-CLUSTER BY (DateTime, GDP_Gold) AS
-WITH Generated_Data AS (
-    SELECT 
-        DATEADD(DAY, SEQ4(), '2023-01-01') AS DateTime,
-        UNIFORM(2000, 5000, RANDOM())::FLOAT AS GDP_Gold,
-        UNIFORM(-0.05, 0.05, RANDOM())::FLOAT AS GDP_Growth_Rate_Gold,
-        UNIFORM(-0.02, 0.02, RANDOM())::FLOAT AS Inflation_Rate_Gold,
-        UNIFORM(4, 10, RANDOM())::FLOAT AS Unemployment_Rate_Gold,
-        UNIFORM(100, 300, RANDOM())::FLOAT AS CPI
-    FROM 
-        TABLE(GENERATOR(ROWCOUNT => 365))
-),
-GDP_Forecast AS (
-    SELECT 
-        DateTime,
-        GDP_Gold,
-        LAG(GDP_Gold, 1) OVER (ORDER BY DateTime) AS Previous_GDP,
-        GDP_Gold * (1 + COALESCE(GDP_Growth_Rate_Gold, 0)) AS Forecasted_GDP
-    FROM 
-        Generated_Data
-),
-Inflation_Forecast AS (
-    SELECT 
-        DateTime,
-        CPI,
-        LAG(CPI, 1) OVER (ORDER BY DateTime) AS Previous_CPI,
-        CPI * (1 + COALESCE(Inflation_Rate_Gold, 0)) AS Forecasted_Inflation
-    FROM 
-        Generated_Data
-)
-SELECT 
-    GDPF.DateTime,
-    GDPF.GDP_Gold,
-    GDPF.Forecasted_GDP,
-    IF.Forecasted_Inflation,
-    GD.Unemployment_Rate_Gold
-FROM 
-    GDP_Forecast GDPF
-JOIN 
-    Inflation_Forecast IF ON GDPF.DateTime = IF.DateTime
-JOIN 
-    Generated_Data GD ON GDPF.DateTime = GD.DateTime;
-            """
+CREATE TABLE IF NOT EXISTS Gold.Gold_MacroEconomic_Forecast (
+ 	DateTime DATE,
+	GDP_Gold FLOAT,
+	Forecasted_GDP FLOAT,
+	Forecasted_Inflation FLOAT,
+	Unemployment_Rate_Gold FLOAT
+) CLUSTER BY (DateTime, GDP_Gold);
+"""
             self.execute_query(gold_query)
 
     def create_all_tables(self):
