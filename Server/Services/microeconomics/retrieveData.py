@@ -14,7 +14,6 @@ END_DATE = pd.to_datetime('today').strftime('%Y-%m-%d')
 # Microeconomic table mappings (example series codes)
 MICROECONOMIC_TABLES = {
     'Micro_Household_Spending': 'DPCERG3M086SBEA',        # Household Spending
-    'Micro_Housing_Prices': 'CSUSHPINSA',                 # Case-Shiller U.S. National Home Price Index
     'Micro_Small_Business_Loans': 'BUSLOANS',             # Small Business Loans
     'Micro_Retail_Sales': 'RSAFS',                        # Retail Sales
     'Micro_Personal_Income': 'PI',                        # Personal Income
