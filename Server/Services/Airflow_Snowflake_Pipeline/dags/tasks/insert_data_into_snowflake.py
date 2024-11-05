@@ -37,13 +37,13 @@ def insert_snowflake_tables(**kwargs):
     df = pd.DataFrame(df_dict)
     df = df.map(lambda x: pd.to_datetime(x) if isinstance(x, str) and x.isdigit() == False else x)
     gold_raw = df.copy()
-    # bronze_result = manager.load_bronze_data(df)
-    # if bronze_result != True:
-    #     return f"Error in Silver Table Processing: {bronze_result}"
+    bronze_result = manager.load_bronze_data(df)
+    if bronze_result != True:
+        return f"Error in Silver Table Processing: {bronze_result}"
     
-    # silver_result = manager.insert_or_update_silver(SILVER_TABLE_NAME, df)
-    # if silver_result != True:
-    #     return f"Error in Silver Table Processing: {silver_result}"
+    silver_result = manager.insert_or_update_silver(SILVER_TABLE_NAME, df)
+    if silver_result != True:
+        return f"Error in Silver Table Processing: {silver_result}"
 
     gold_result = manager.insert_or_update_gold(GOLD_TABLE_NAME, gold_raw)
     if gold_result != True:
