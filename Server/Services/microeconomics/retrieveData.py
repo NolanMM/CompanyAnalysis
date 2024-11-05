@@ -19,6 +19,13 @@ MICROECONOMIC_TABLES = {
     'Micro_Retail_Sales': 'RSAFS',                        # Retail Sales
     'Micro_Personal_Income': 'PI',                        # Personal Income
     'Micro_Unemployment_Rate': 'UNRATE',                  # Unemployment Rate
+    'Micro_Consumption': 'PCE',                           # Personal Consumption Expenditures (for GDP calc)
+    'Micro_Investment': 'GPDIC1',                         # Gross Private Domestic Investment (for GDP calc)
+    'Micro_Government_Spending': 'GCEC1',                 # Government Consumption Expenditures (for GDP calc)
+    'Micro_Exports': 'EXPGSC1',                           # Exports of Goods and Services (for GDP calc)
+    'Micro_Imports': 'IMPGSC1',                           # Imports of Goods and Services (for GDP calc)
+    'Micro_Public_Debt': 'GFDEBTN',                       # Federal Debt: Total Public Debt
+    'Micro_Interest_Rate': 'DGS10'                        # Treasury Constant Maturity Rate
 }
 
 USER_SNOWFLAKE = os.getenv("USER_SNOWFLAKE")
@@ -57,6 +64,44 @@ class MicroeconomicDataRetriever:
         df.index.name = 'DateTime'
         df.reset_index(inplace=True)
         
+        # Additional Calculations
+        df = self.calculate_metrics(df)
+        
+        return df
+
+    def calculate_metrics(self, df):
+        """Perform additional calculations and add derived metrics to DataFrame."""
+        # Calculate GDP using the formula GDP = C + I + G + (X - M)
+        df['GDP'] = df['Micro_Consumption'] + df['Micro_Investment'] + df['Micro_Government_Spending'] + (df['Micro_Exports'] - df['Micro_Imports'])
+        
+        # GDP Growth Rate
+        df['GDP_Growth_Rate'] = df['GDP'].pct_change(fill_method=None) * 100
+
+        # Inflation Rate using CPI (if available in microeconomic data)
+        if 'Micro_CPI' in df.columns:
+            df['Inflation_Rate'] = df['Micro_CPI'].pct_change(fill_method=None) * 100
+
+        # Unemployment Rate calculation
+        df['Unemployment_Rate'] = df['Micro_Unemployment_Rate']  # Assuming this is already a percentage
+
+        # Trade Balance calculation
+        df['Trade_Balance'] = df['Micro_Exports'] - df['Micro_Imports']
+        
+        # Investment-to-GDP Ratio
+        df['Investment_to_GDP_Ratio'] = (df['Micro_Investment'] / df['GDP']) * 100
+        
+        # Consumption Growth Rate
+        df['Consumption_Growth_Rate'] = df['Micro_Consumption'].pct_change(fill_method=None) * 100
+        
+        # Interest Rate Changes
+        df['Interest_Rate_Change'] = df['Micro_Interest_Rate'].diff()
+        
+        # Debt-to-GDP Ratio
+        df['Debt_to_GDP_Ratio'] = (df['Micro_Public_Debt'] / df['GDP']) * 100
+
+        # Forward fill any missing data
+        df.ffill(inplace=True)
+        
         return df
 
     def insert_data_to_snowflake(self, df, table_name):
@@ -72,17 +117,40 @@ class MicroeconomicDataRetriever:
             Small_Business_Loans FLOAT,
             Retail_Sales FLOAT,
             Personal_Income FLOAT,
-            Unemployment_Rate FLOAT
+            Unemployment_Rate FLOAT,
+            Consumption FLOAT,
+            Investment FLOAT,
+            Government_Spending FLOAT,
+            Exports FLOAT,
+            Imports FLOAT,
+            Public_Debt FLOAT,
+            Interest_Rate FLOAT,
+            GDP FLOAT,
+            GDP_Growth_Rate FLOAT,
+            Inflation_Rate FLOAT,
+            Trade_Balance FLOAT,
+            Investment_to_GDP_Ratio FLOAT,
+            Consumption_Growth_Rate FLOAT,
+            Interest_Rate_Change FLOAT,
+            Debt_to_GDP_Ratio FLOAT
         );
         """)
 
         # Insert data row by row
         for _, row in df.iterrows():
             cursor.execute(f"""
-            INSERT INTO Microeconomics.{table_name} (DateTime, Household_Spending, Housing_Prices, Small_Business_Loans, Retail_Sales, Personal_Income, Unemployment_Rate)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (row['DateTime'], row['Micro_Household_Spending'], row['Micro_Housing_Prices'], row['Micro_Small_Business_Loans'], 
-                  row['Micro_Retail_Sales'], row['Micro_Personal_Income'], row['Micro_Unemployment_Rate']))
+            INSERT INTO Microeconomics.{table_name} (DateTime, Household_Spending, Housing_Prices, Small_Business_Loans, Retail_Sales, Personal_Income, 
+            Unemployment_Rate, Consumption, Investment, Government_Spending, Exports, Imports, Public_Debt, Interest_Rate, GDP, GDP_Growth_Rate, 
+            Inflation_Rate, Trade_Balance, Investment_to_GDP_Ratio, Consumption_Growth_Rate, Interest_Rate_Change, Debt_to_GDP_Ratio)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                row['DateTime'], row['Micro_Household_Spending'], row['Micro_Housing_Prices'], row['Micro_Small_Business_Loans'], 
+                row['Micro_Retail_Sales'], row['Micro_Personal_Income'], row['Unemployment_Rate'], row['Micro_Consumption'], 
+                row['Micro_Investment'], row['Micro_Government_Spending'], row['Micro_Exports'], row['Micro_Imports'], 
+                row['Micro_Public_Debt'], row['Micro_Interest_Rate'], row['GDP'], row['GDP_Growth_Rate'], row.get('Inflation_Rate', None), 
+                row['Trade_Balance'], row['Investment_to_GDP_Ratio'], row['Consumption_Growth_Rate'], row['Interest_Rate_Change'], 
+                row['Debt_to_GDP_Ratio']
+            ))
 
         self.conn.commit()
         cursor.close()
