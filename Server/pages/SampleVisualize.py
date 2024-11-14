@@ -86,8 +86,6 @@ class Graphs_Page:
         self.UI_Section_Time_Series(gold_table_graphs, data)
         
         
-        
-    
     def UI_Section_Actual_GDP(self, data):
         st.write("Actual GDP")
         dates = [row['DATETIME'] for row in data]
